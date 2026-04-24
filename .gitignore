@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+venv/
+.venv/
+
+# Environment — keep secrets out of git
+.env
+# .env.example is safe to commit (no real keys)
+
+# Runtime directories
+outputs/
+figures/
+uploads/
+figcaption_uploads/
+figcaption_outputs/
+figcaption_figures/
+
+# MacOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Docker
+*.log

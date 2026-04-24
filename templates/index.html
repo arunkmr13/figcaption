@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FigCaption</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1814;
+    --ink-2: #4a4740;
+    --ink-3: #8a8780;
+    --rule: #e2dfd8;
+    --paper: #faf9f6;
+    --paper-2: #f0ede6;
+    --accent: #c9501a;
+    --accent-light: #fdf0ea;
+    --green: #1a7a4a;
+    --green-light: #eaf5ef;
+    --blue: #1a4a8a;
+    --blue-light: #eaf0fb;
+    --mono: 'DM Mono', monospace;
+    --serif: 'DM Serif Display', serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding: 0 48px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: var(--serif);
+    font-size: 22px;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-3);
+    border: 1px solid var(--rule);
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Main layout ── */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 64px 48px 120px;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    margin-bottom: 56px;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: 48px;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+    color: var(--ink);
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero p {
+    font-size: 16px;
+    color: var(--ink-2);
+    max-width: 540px;
+    line-height: 1.7;
+  }
+
+  /* ── Upload zone ── */
+  .upload-section {
+    margin-bottom: 40px;
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--rule);
+    border-radius: 4px;
+    padding: 56px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--paper);
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-icon {
+    width: 40px; height: 40px;
+    margin: 0 auto 16px;
+    opacity: 0.3;
+  }
+
+  .drop-label {
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  .drop-sub {
+    font-size: 13px;
+    color: var(--ink-3);
+    font-family: var(--mono);
+  }
+
+  .drop-zone.has-file {
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+
+  .drop-zone.has-file .drop-label {
+    color: var(--accent);
+  }
+
+  /* ── API key row ── */
+  .api-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 16px;
+  }
+
+  .api-row label {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .api-row input {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 14px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .api-row input:focus { border-color: var(--accent); }
+  .api-row input::placeholder { color: var(--ink-3); }
+
+  /* ── Run button ── */
+  .run-btn {
+    margin-top: 24px;
+    width: 100%;
+    padding: 16px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 3px;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .run-btn:hover { background: var(--accent); }
+  .run-btn:active { transform: scale(0.99); }
+  .run-btn:disabled { background: var(--ink-3); cursor: not-allowed; transform: none; }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 48px 0;
+  }
+
+  /* ── Progress panel ── */
+  #progress-panel { display: none; }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 24px;
+  }
+
+  .progress-title {
+    font-family: var(--serif);
+    font-size: 26px;
+    letter-spacing: -0.5px;
+  }
+
+  .progress-counter {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+
+  /* Progress bar */
+  .progress-track {
+    height: 3px;
+    background: var(--rule);
+    border-radius: 2px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+
+  /* ── Figure cards ── */
+  .figures-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .fig-card {
+    background: var(--paper);
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--rule);
+    animation: slideIn 0.25s ease;
+  }
+
+  .fig-card:last-child { border-bottom: none; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .fig-card.processing { background: #fffdf9; }
+  .fig-card.done-card  { background: var(--paper); }
+  .fig-card.error-card { background: #fff8f6; }
+
+  .fig-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .fig-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+
+  .fig-status {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-weight: 500;
+  }
+
+  .fig-status.processing { background: #fff3e0; color: #c76b00; }
+  .fig-status.done       { background: var(--green-light); color: var(--green); }
+  .fig-status.skipped    { background: var(--paper-2); color: var(--ink-3); }
+  .fig-status.error      { background: var(--accent-light); color: var(--accent); }
+
+  .fig-type {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--blue);
+    background: var(--blue-light);
+    padding: 2px 8px;
+    border-radius: 2px;
+    margin-right: 8px;
+  }
+
+  .fig-caption {
+    font-size: 13px;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+
+  .fig-alt {
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--paper-2);
+    padding: 10px 14px;
+    border-left: 3px solid var(--accent);
+    border-radius: 0 3px 3px 0;
+    line-height: 1.6;
+  }
+
+  .fig-alt-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+  }
+
+  /* ── Processing spinner ── */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--rule);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Results panel ── */
+  #results-panel { display: none; }
+
+  .results-summary {
+    background: var(--green-light);
+    border: 1px solid #b8e0c8;
+    border-radius: 4px;
+    padding: 28px 32px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .results-summary h2 {
+    font-family: var(--serif);
+    font-size: 28px;
+    color: var(--green);
+    margin-bottom: 4px;
+  }
+
+  .results-summary p {
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+
+  .stat-row {
+    display: flex;
+    gap: 32px;
+    flex-shrink: 0;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-n {
+    font-family: var(--serif);
+    font-size: 32px;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 4px;
+  }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: var(--ink);
+    color: var(--paper);
+    text-decoration: none;
+    border-radius: 3px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+
+  .download-btn:hover { background: var(--accent); }
+
+  /* ── Error banner ── */
+  .error-banner {
+    background: var(--accent-light);
+    border: 1px solid #f5c0a0;
+    border-radius: 4px;
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--accent);
+    margin-bottom: 24px;
+    display: none;
+  }
+
+  /* ── Status message ── */
+  .status-msg {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-bottom: 20px;
+    min-height: 18px;
+  }
+
+  /* ── Reset button ── */
+  .reset-btn {
+    background: none;
+    border: 1px solid var(--rule);
+    padding: 10px 20px;
+    border-radius: 3px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--ink-2);
+    transition: border-color 0.15s, color 0.15s;
+    margin-top: 24px;
+  }
+
+  .reset-btn:hover { border-color: var(--ink); color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    FigCaption
+  </div>
+  <span class="badge">PHASE 1 — ALT TEXT PIPELINE</span>
+</header>
+
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Scientific figures,<br><em>made accessible.</em></h1>
+    <p>Upload a scientific PDF and FigCaption will extract every figure, match its caption, and generate screen-reader-ready alt text.</p>
+  </div>
+
+  <!-- Upload form -->
+  <div class="upload-section" id="upload-section">
+
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept=".pdf">
+      <svg class="drop-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="4" width="22" height="28" rx="2" stroke="#1a1814" stroke-width="1.5"/>
+        <path d="M20 4v8h8" stroke="#1a1814" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M20 22v8M17 27l3 3 3-3" stroke="#1a1814" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="drop-label" id="drop-label">Drop a PDF here</div>
+      <div class="drop-sub" id="drop-sub">or click to browse · max 50MB</div>
+    </div>
+
+    
+
+    <button class="run-btn" id="run-btn" onclick="startPipeline()" disabled>
+      Generate Alt Text
+    </button>
+
+  </div>
+
+  <hr class="divider" id="divider" style="display:none">
+
+  <!-- Error banner -->
+  <div class="error-banner" id="error-banner"></div>
+
+  <!-- Progress panel -->
+  <div id="progress-panel">
+    <div class="progress-header">
+      <div class="progress-title">Processing</div>
+      <div class="progress-counter" id="progress-counter">0 / 0</div>
+    </div>
+
+    <div class="status-msg" id="status-msg">Starting pipeline...</div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+
+    <div class="figures-list" id="figures-list"></div>
+  </div>
+
+  <!-- Results panel -->
+  <div id="results-panel">
+    <div class="results-summary">
+      <div>
+        <h2>Done!</h2>
+        <p>Alt text generated and ready for SME review.</p>
+      </div>
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-n" id="stat-total">—</div>
+          <div class="stat-label">Figures</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" id="stat-done">—</div>
+          <div class="stat-label">Alt text</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n" id="stat-skip">—</div>
+          <div class="stat-label">Skipped</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+<a href="#" class="download-btn" id="download-btn">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M8 2v8M5 7l3 3 3-3M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  Download Excel
+</a>
+<a href="#" class="download-btn" id="download-figures-btn" style="background:var(--ink-2)">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M8 2v8M5 7l3 3 3-3M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  Download Figures
+</a>
+</div>
+
+    <button class="reset-btn" onclick="resetForm()">Process another PDF</button>
+  </div>
+
+</main>
+
+<script>
+  let selectedFile = null;
+  let currentJobId = null;
+  let eventSource = null;
+
+  // ── Drag & drop ─────────────────────────────────────────────────────────
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  function setFile(file) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      showError('Please upload a PDF file.');
+      return;
+    }
+    selectedFile = file;
+    dropZone.classList.add('has-file');
+    document.getElementById('drop-label').textContent = file.name;
+    document.getElementById('drop-sub').textContent =
+      (file.size / 1024 / 1024).toFixed(1) + ' MB';
+    document.getElementById('run-btn').disabled = false;
+  }
+
+  // ── Start pipeline ───────────────────────────────────────────────────────
+  async function startPipeline() {
+    if (!selectedFile) return;
+
+    const apiKey = '';
+    const formData = new FormData();
+    formData.append('pdf', selectedFile);
+    formData.append('api_key', apiKey);
+
+    document.getElementById('run-btn').disabled = true;
+    document.getElementById('run-btn').textContent = 'Uploading...';
+    hideError();
+
+    try {
+      const res = await fetch('/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.error) { showError(data.error); resetBtn(); return; }
+
+      currentJobId = data.job_id;
+      showProgressPanel();
+      listenToStream(currentJobId);
+
+    } catch (e) {
+      showError('Upload failed: ' + e.message);
+      resetBtn();
+    }
+  }
+
+  // ── SSE stream ───────────────────────────────────────────────────────────
+  function listenToStream(jobId) {
+    eventSource = new EventSource(`/stream/${jobId}`);
+
+    eventSource.onmessage = e => {
+      const msg = JSON.parse(e.data);
+      handleMessage(msg);
+    };
+
+    eventSource.onerror = () => {
+      showError('Connection lost. Please try again.');
+      eventSource.close();
+    };
+  }
+
+  function handleMessage(msg) {
+    if (msg.type === 'ping') return;
+
+    if (msg.type === 'status') {
+      setStatus(msg.message);
+    }
+
+    if (msg.type === 'extracted') {
+      setStatus(msg.message);
+    }
+
+    if (msg.type === 'progress') {
+      setStatus(msg.message);
+      updateProgress(msg.current, msg.total);
+      addFigCard(msg.fig_id, msg.fig_type, msg.caption, '', 'processing');
+    }
+
+    if (msg.type === 'figure_done') {
+      updateFigCard(msg.fig_id, msg.alt_text, msg.status);
+      updateProgress(msg.current, msg.total);
+    }
+
+    if (msg.type === 'done') {
+      eventSource.close();
+      setStatus('Complete!');
+      updateProgress(msg.total, msg.total);
+      setTimeout(() => showResults(msg), 600);
+    }
+
+    if (msg.type === 'error') {
+      eventSource.close();
+      showError(msg.message);
+      resetBtn();
+    }
+  }
+
+  // ── UI helpers ───────────────────────────────────────────────────────────
+  function showProgressPanel() {
+    document.getElementById('divider').style.display = 'block';
+    document.getElementById('progress-panel').style.display = 'block';
+    document.getElementById('run-btn').textContent = 'Running...';
+  }
+
+  function showResults(data) {
+    document.getElementById('progress-panel').style.display = 'none';
+    document.getElementById('results-panel').style.display = 'block';
+    document.getElementById('stat-total').textContent = data.total;
+    document.getElementById('stat-done').textContent = data.done;
+    document.getElementById('stat-skip').textContent = data.skipped;
+    const dlBtn = document.getElementById('download-btn');
+    dlBtn.href = `/download/${data.job_id}`;
+    document.getElementById('download-figures-btn').href = `/download-figures/${data.job_id}`;
+  }
+
+  function setStatus(msg) {
+    document.getElementById('status-msg').textContent = msg;
+  }
+
+  function updateProgress(current, total) {
+    document.getElementById('progress-counter').textContent = `${current} / ${total}`;
+    document.getElementById('progress-fill').style.width = total > 0 ? `${(current/total)*100}%` : '0%';
+  }
+
+  function addFigCard(figId, figType, caption, altText, status) {
+    const list = document.getElementById('figures-list');
+    const card = document.createElement('div');
+    card.className = `fig-card ${status === 'processing' ? 'processing' : ''}`;
+    card.id = `card-${figId}`;
+    card.innerHTML = `
+      <div class="fig-card-top">
+        <div>
+          <span class="fig-type">${figType}</span>
+          <span class="fig-id">${figId}</span>
+        </div>
+        <span class="fig-status processing" id="status-${figId}">
+          <span class="spinner"></span> processing
+        </span>
+      </div>
+      <div class="fig-caption">${caption || 'No caption available'}</div>
+      <div id="alt-${figId}"></div>
+    `;
+    list.appendChild(card);
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function updateFigCard(figId, altText, status) {
+    const statusEl = document.getElementById(`status-${figId}`);
+    const altEl = document.getElementById(`alt-${figId}`);
+    const card = document.getElementById(`card-${figId}`);
+
+    if (statusEl) {
+      statusEl.className = `fig-status ${status}`;
+      statusEl.innerHTML = status;
+    }
+
+    if (altEl && altText && !altText.startsWith('[SKIPPED') && !altText.startsWith('[ERROR')) {
+      altEl.innerHTML = `
+        <div class="fig-alt-label">Alt text</div>
+        <div class="fig-alt">${altText}</div>
+      `;
+    } else if (altEl && altText) {
+      altEl.innerHTML = `<div class="fig-alt" style="border-left-color: var(--ink-3); color: var(--ink-3)">${altText}</div>`;
+    }
+
+    if (card) card.className = `fig-card ${status === 'done' ? 'done-card' : status === 'error' ? 'error-card' : ''}`;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-banner');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-banner').style.display = 'none';
+  }
+
+  function resetBtn() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled = false;
+    btn.textContent = 'Generate Alt Text';
+  }
+
+  function resetForm() {
+    selectedFile = null;
+    currentJobId = null;
+    if (eventSource) { eventSource.close(); eventSource = null; }
+
+    document.getElementById('drop-zone').classList.remove('has-file');
+    document.getElementById('drop-label').textContent = 'Drop a PDF here';
+    document.getElementById('drop-sub').textContent = 'or click to browse · max 50MB';
+    document.getElementById('figures-list').innerHTML = '';
+    document.getElementById('progress-fill').style.width = '0%';
+    document.getElementById('progress-counter').textContent = '0 / 0';
+    document.getElementById('divider').style.display = 'none';
+    document.getElementById('progress-panel').style.display = 'none';
+    document.getElementById('results-panel').style.display = 'none';
+    document.getElementById('file-input').value = '';
+
+    hideError();
+    resetBtn();
+    document.getElementById('run-btn').disabled = true;
+  }
+</script>
+</body>
+</html>

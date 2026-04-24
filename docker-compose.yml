@@ -1,0 +1,10 @@
+services:
+  figcaption:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./figures:/app/figures
+      - ./outputs:/app/outputs
