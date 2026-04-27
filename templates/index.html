@@ -20,6 +20,10 @@
     --green-light: #eaf5ef;
     --blue: #1a4a8a;
     --blue-light: #eaf0fb;
+    --yellow: #92700a;
+    --yellow-light: #fdf8e1;
+    --orange: #a34a00;
+    --orange-light: #fff0e0;
     --mono: 'DM Mono', monospace;
     --serif: 'DM Serif Display', serif;
     --sans: 'DM Sans', sans-serif;
@@ -85,9 +89,7 @@
   }
 
   /* ── Hero ── */
-  .hero {
-    margin-bottom: 56px;
-  }
+  .hero { margin-bottom: 56px; }
 
   .hero h1 {
     font-family: var(--serif);
@@ -98,10 +100,7 @@
     color: var(--ink);
   }
 
-  .hero h1 em {
-    font-style: italic;
-    color: var(--accent);
-  }
+  .hero h1 em { font-style: italic; color: var(--accent); }
 
   .hero p {
     font-size: 16px;
@@ -111,9 +110,7 @@
   }
 
   /* ── Upload zone ── */
-  .upload-section {
-    margin-bottom: 40px;
-  }
+  .upload-section { margin-bottom: 40px; }
 
   .drop-zone {
     border: 1.5px dashed var(--rule);
@@ -165,40 +162,24 @@
     background: var(--accent-light);
   }
 
-  .drop-zone.has-file .drop-label {
-    color: var(--accent);
-  }
+  .drop-zone.has-file .drop-label { color: var(--accent); }
 
-  /* ── API key row ── */
-  .api-row {
-    display: flex;
-    gap: 12px;
+  /* ── Source type pill ── */
+  .source-pill {
+    display: inline-flex;
     align-items: center;
-    margin-top: 16px;
-  }
-
-  .api-row label {
-    font-size: 12px;
+    gap: 6px;
+    margin-top: 12px;
     font-family: var(--mono);
-    color: var(--ink-3);
-    white-space: nowrap;
-  }
-
-  .api-row input {
-    flex: 1;
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 10px 14px;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 2px;
     border: 1px solid var(--rule);
-    border-radius: 3px;
-    background: var(--paper);
-    color: var(--ink);
-    outline: none;
-    transition: border-color 0.15s;
+    color: var(--ink-3);
   }
 
-  .api-row input:focus { border-color: var(--accent); }
-  .api-row input::placeholder { color: var(--ink-3); }
+  .source-pill.pdf { background: var(--blue-light); color: var(--blue); border-color: #c0d4f5; }
+  .source-pill.xml { background: var(--green-light); color: var(--green); border-color: #b8e0c8; }
 
   /* ── Run button ── */
   .run-btn {
@@ -250,7 +231,6 @@
     color: var(--ink-3);
   }
 
-  /* Progress bar */
   .progress-track {
     height: 3px;
     background: var(--rule);
@@ -294,12 +274,21 @@
   .fig-card.processing { background: #fffdf9; }
   .fig-card.done-card  { background: var(--paper); }
   .fig-card.error-card { background: #fff8f6; }
+  .fig-card.skipped-card { background: var(--paper-2); }
 
   .fig-card-top {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 8px;
+    gap: 12px;
+  }
+
+  .fig-card-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
   }
 
   .fig-id {
@@ -308,12 +297,14 @@
     color: var(--ink-3);
   }
 
+  /* Status badge */
   .fig-status {
     font-family: var(--mono);
     font-size: 10px;
     padding: 2px 8px;
     border-radius: 2px;
     font-weight: 500;
+    white-space: nowrap;
   }
 
   .fig-status.processing { background: #fff3e0; color: #c76b00; }
@@ -321,6 +312,7 @@
   .fig-status.skipped    { background: var(--paper-2); color: var(--ink-3); }
   .fig-status.error      { background: var(--accent-light); color: var(--accent); }
 
+  /* Figure type pill */
   .fig-type {
     font-size: 11px;
     font-family: var(--mono);
@@ -328,8 +320,35 @@
     background: var(--blue-light);
     padding: 2px 8px;
     border-radius: 2px;
-    margin-right: 8px;
   }
+
+  /* Flag pill */
+  .fig-flag {
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-weight: 500;
+  }
+
+  .fig-flag.OK               { background: var(--green-light); color: var(--green); }
+  .fig-flag.CAPTION_INSUFFICIENT { background: var(--yellow-light); color: var(--yellow); }
+  .fig-flag.CAPTION_MISSING  { background: var(--orange-light); color: var(--orange); }
+  .fig-flag.IMAGE_MISSING    { background: var(--accent-light); color: var(--accent); }
+  .fig-flag.ALT_ALREADY_PRESENT { background: var(--paper-2); color: var(--ink-3); }
+  .fig-flag.default          { background: var(--paper-2); color: var(--ink-3); }
+
+  /* Confidence pill */
+  .fig-confidence {
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 2px;
+  }
+
+  .fig-confidence.HIGH   { background: var(--green-light); color: var(--green); }
+  .fig-confidence.MEDIUM { background: var(--yellow-light); color: var(--yellow); }
+  .fig-confidence.LOW    { background: var(--accent-light); color: var(--accent); }
 
   .fig-caption {
     font-size: 13px;
@@ -357,7 +376,7 @@
     margin-bottom: 4px;
   }
 
-  /* ── Processing spinner ── */
+  /* ── Spinner ── */
   .spinner {
     width: 14px; height: 14px;
     border: 2px solid var(--rule);
@@ -393,20 +412,11 @@
     margin-bottom: 4px;
   }
 
-  .results-summary p {
-    font-size: 14px;
-    color: var(--ink-2);
-  }
+  .results-summary p { font-size: 14px; color: var(--ink-2); }
 
-  .stat-row {
-    display: flex;
-    gap: 32px;
-    flex-shrink: 0;
-  }
+  .stat-row { display: flex; gap: 32px; flex-shrink: 0; }
 
-  .stat {
-    text-align: center;
-  }
+  .stat { text-align: center; }
 
   .stat-n {
     font-family: var(--serif);
@@ -424,21 +434,35 @@
     margin-top: 4px;
   }
 
+  /* ── Download buttons ── */
+  .download-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
   .download-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 14px 28px;
+    padding: 12px 22px;
     background: var(--ink);
     color: var(--paper);
     text-decoration: none;
     border-radius: 3px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     transition: background 0.15s;
+    font-family: var(--sans);
   }
 
   .download-btn:hover { background: var(--accent); }
+  .download-btn.secondary { background: var(--ink-2); }
+  .download-btn.secondary:hover { background: var(--ink); }
+  .download-btn.xml-btn { background: var(--green); }
+  .download-btn.xml-btn:hover { background: #155a37; }
+  .download-btn.hidden { display: none; }
 
   /* ── Error banner ── */
   .error-banner {
@@ -471,10 +495,19 @@
     cursor: pointer;
     color: var(--ink-2);
     transition: border-color 0.15s, color 0.15s;
-    margin-top: 24px;
+    margin-top: 8px;
   }
 
   .reset-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ── XML note ── */
+  .xml-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    margin-top: 6px;
+    display: none;
+  }
 </style>
 </head>
 <body>
@@ -484,7 +517,7 @@
     <span class="logo-dot"></span>
     FigCaption
   </div>
-  <span class="badge">PHASE 1 — ALT TEXT PIPELINE</span>
+  <span class="badge">PHASE 2 — ALT TEXT PIPELINE</span>
 </header>
 
 <main>
@@ -492,24 +525,25 @@
   <!-- Hero -->
   <div class="hero">
     <h1>Scientific figures,<br><em>made accessible.</em></h1>
-    <p>Upload a scientific PDF and FigCaption will extract every figure, match its caption, and generate screen-reader-ready alt text.</p>
+    <p>Upload a scientific PDF or XML and FigCaption will extract every figure, validate captions, and generate screen-reader-ready alt text.</p>
   </div>
 
   <!-- Upload form -->
   <div class="upload-section" id="upload-section">
 
     <div class="drop-zone" id="drop-zone">
-      <input type="file" id="file-input" accept=".pdf">
+      <input type="file" id="file-input" accept=".pdf,.xml">
       <svg class="drop-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="6" y="4" width="22" height="28" rx="2" stroke="#1a1814" stroke-width="1.5"/>
         <path d="M20 4v8h8" stroke="#1a1814" stroke-width="1.5" stroke-linecap="round"/>
         <path d="M20 22v8M17 27l3 3 3-3" stroke="#1a1814" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <div class="drop-label" id="drop-label">Drop a PDF here</div>
+      <div class="drop-label" id="drop-label">Drop a PDF or XML here</div>
       <div class="drop-sub" id="drop-sub">or click to browse · max 50MB</div>
     </div>
-
-    
+    <div id="source-pill-wrap" style="text-align:center; display:none;">
+      <span class="source-pill" id="source-pill"></span>
+    </div>
 
     <button class="run-btn" id="run-btn" onclick="startPipeline()" disabled>
       Generate Alt Text
@@ -561,22 +595,36 @@
       </div>
     </div>
 
-    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-<a href="#" class="download-btn" id="download-btn">
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M8 2v8M5 7l3 3 3-3M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  Download Excel
-</a>
-<a href="#" class="download-btn" id="download-figures-btn" style="background:var(--ink-2)">
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <path d="M8 2v8M5 7l3 3 3-3M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  Download Figures
-</a>
-</div>
+    <!-- Download buttons -->
+    <div class="download-group">
+      <a href="#" class="download-btn" id="download-excel-btn">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v8M5 7l3 3 3-3M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Download Excel
+      </a>
+      <a href="#" class="download-btn secondary" id="download-figures-btn">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v8M5 7l3 3 3-3M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Download Figures
+      </a>
+      <a href="#" class="download-btn xml-btn hidden" id="download-xml-btn">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v8M5 7l3 3 3-3M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Alt Text XML
+      </a>
+      <a href="#" class="download-btn xml-btn hidden" id="download-embedded-btn">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v8M5 7l3 3 3-3M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Embedded XML
+      </a>
+    </div>
+    <div class="xml-note" id="xml-note">✦ XML outputs include alt text injected back into the original JATS structure.</div>
 
-    <button class="reset-btn" onclick="resetForm()">Process another PDF</button>
+    <button class="reset-btn" onclick="resetForm()">Process another file</button>
   </div>
 
 </main>
@@ -584,9 +632,10 @@
 <script>
   let selectedFile = null;
   let currentJobId = null;
+  let currentSourceType = null;
   let eventSource = null;
 
-  // ── Drag & drop ─────────────────────────────────────────────────────────
+  // ── Drag & drop ──────────────────────────────────────────────────────────
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
 
@@ -604,15 +653,25 @@
   });
 
   function setFile(file) {
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      showError('Please upload a PDF file.');
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['pdf', 'xml'].includes(ext)) {
+      showError('Please upload a PDF or XML file.');
       return;
     }
     selectedFile = file;
+    currentSourceType = ext;
+
     dropZone.classList.add('has-file');
     document.getElementById('drop-label').textContent = file.name;
-    document.getElementById('drop-sub').textContent =
-      (file.size / 1024 / 1024).toFixed(1) + ' MB';
+    document.getElementById('drop-sub').textContent = (file.size / 1024 / 1024).toFixed(1) + ' MB';
+
+    // Show source type pill
+    const pillWrap = document.getElementById('source-pill-wrap');
+    const pill = document.getElementById('source-pill');
+    pill.className = `source-pill ${ext}`;
+    pill.textContent = ext === 'pdf' ? '📄 PDF' : '📋 XML / JATS';
+    pillWrap.style.display = 'block';
+
     document.getElementById('run-btn').disabled = false;
   }
 
@@ -620,10 +679,9 @@
   async function startPipeline() {
     if (!selectedFile) return;
 
-    const apiKey = '';
     const formData = new FormData();
     formData.append('pdf', selectedFile);
-    formData.append('api_key', apiKey);
+    formData.append('api_key', '');
 
     document.getElementById('run-btn').disabled = true;
     document.getElementById('run-btn').textContent = 'Uploading...';
@@ -632,13 +690,10 @@
     try {
       const res = await fetch('/upload', { method: 'POST', body: formData });
       const data = await res.json();
-
       if (data.error) { showError(data.error); resetBtn(); return; }
-
       currentJobId = data.job_id;
       showProgressPanel();
       listenToStream(currentJobId);
-
     } catch (e) {
       showError('Upload failed: ' + e.message);
       resetBtn();
@@ -648,12 +703,10 @@
   // ── SSE stream ───────────────────────────────────────────────────────────
   function listenToStream(jobId) {
     eventSource = new EventSource(`/stream/${jobId}`);
-
     eventSource.onmessage = e => {
       const msg = JSON.parse(e.data);
       handleMessage(msg);
     };
-
     eventSource.onerror = () => {
       showError('Connection lost. Please try again.');
       eventSource.close();
@@ -662,23 +715,16 @@
 
   function handleMessage(msg) {
     if (msg.type === 'ping') return;
-
-    if (msg.type === 'status') {
-      setStatus(msg.message);
-    }
-
-    if (msg.type === 'extracted') {
-      setStatus(msg.message);
-    }
+    if (msg.type === 'status' || msg.type === 'extracted') setStatus(msg.message);
 
     if (msg.type === 'progress') {
       setStatus(msg.message);
       updateProgress(msg.current, msg.total);
-      addFigCard(msg.fig_id, msg.fig_type, msg.caption, '', 'processing');
+      addFigCard(msg.fig_id, msg.fig_type, msg.caption, msg.final_flag, msg.eligible);
     }
 
     if (msg.type === 'figure_done') {
-      updateFigCard(msg.fig_id, msg.alt_text, msg.status);
+      updateFigCard(msg.fig_id, msg.alt_text, msg.status, msg.final_flag, msg.confidence);
       updateProgress(msg.current, msg.total);
     }
 
@@ -709,29 +755,52 @@
     document.getElementById('stat-total').textContent = data.total;
     document.getElementById('stat-done').textContent = data.done;
     document.getElementById('stat-skip').textContent = data.skipped;
-    const dlBtn = document.getElementById('download-btn');
-    dlBtn.href = `/download/${data.job_id}`;
-    document.getElementById('download-figures-btn').href = `/download-figures/${data.job_id}`;
+
+    document.getElementById('download-excel-btn').href   = `/download/excel/${data.job_id}`;
+    document.getElementById('download-figures-btn').href = `/download/figures/${data.job_id}`;
+
+    // Show XML buttons only for XML source
+    if (data.source_type === 'xml') {
+      document.getElementById('download-xml-btn').classList.remove('hidden');
+      document.getElementById('download-embedded-btn').classList.remove('hidden');
+      document.getElementById('download-xml-btn').href      = `/download/xml/${data.job_id}`;
+      document.getElementById('download-embedded-btn').href = `/download/embedded-xml/${data.job_id}`;
+      document.getElementById('xml-note').style.display = 'block';
+    }
   }
 
-  function setStatus(msg) {
-    document.getElementById('status-msg').textContent = msg;
-  }
+  function setStatus(msg) { document.getElementById('status-msg').textContent = msg; }
 
   function updateProgress(current, total) {
     document.getElementById('progress-counter').textContent = `${current} / ${total}`;
     document.getElementById('progress-fill').style.width = total > 0 ? `${(current/total)*100}%` : '0%';
   }
 
-  function addFigCard(figId, figType, caption, altText, status) {
+  function _flagClass(flag) {
+    if (!flag) return 'default';
+    if (flag === 'OK') return 'OK';
+    if (flag.includes('INSUFFICIENT')) return 'CAPTION_INSUFFICIENT';
+    if (flag.includes('MISSING')) return 'CAPTION_MISSING';
+    if (flag.includes('IMAGE')) return 'IMAGE_MISSING';
+    if (flag.includes('PRESENT')) return 'ALT_ALREADY_PRESENT';
+    return 'default';
+  }
+
+  function addFigCard(figId, figType, caption, finalFlag, eligible) {
     const list = document.getElementById('figures-list');
     const card = document.createElement('div');
-    card.className = `fig-card ${status === 'processing' ? 'processing' : ''}`;
+    card.className = 'fig-card processing';
     card.id = `card-${figId}`;
+
+    const flagHtml = finalFlag
+      ? `<span class="fig-flag ${_flagClass(finalFlag)}">${finalFlag}</span>`
+      : '';
+
     card.innerHTML = `
       <div class="fig-card-top">
-        <div>
-          <span class="fig-type">${figType}</span>
+        <div class="fig-card-left">
+          <span class="fig-type">${figType || 'Unknown'}</span>
+          ${flagHtml}
           <span class="fig-id">${figId}</span>
         </div>
         <span class="fig-status processing" id="status-${figId}">
@@ -745,14 +814,26 @@
     card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  function updateFigCard(figId, altText, status) {
+  function updateFigCard(figId, altText, status, finalFlag, confidence) {
     const statusEl = document.getElementById(`status-${figId}`);
-    const altEl = document.getElementById(`alt-${figId}`);
-    const card = document.getElementById(`card-${figId}`);
+    const altEl    = document.getElementById(`alt-${figId}`);
+    const card     = document.getElementById(`card-${figId}`);
 
     if (statusEl) {
-      statusEl.className = `fig-status ${status}`;
-      statusEl.innerHTML = status;
+      const s = status === 'skipped_existing_alt' ? 'skipped' : status;
+      statusEl.className = `fig-status ${s}`;
+      statusEl.innerHTML = status === 'skipped_existing_alt' ? 'existing alt' : s;
+    }
+
+    // Add confidence pill
+    if (confidence && confidence !== 'None' && confidence !== 'null') {
+      const left = card ? card.querySelector('.fig-card-left') : null;
+      if (left && !left.querySelector('.fig-confidence')) {
+        const confEl = document.createElement('span');
+        confEl.className = `fig-confidence ${confidence}`;
+        confEl.textContent = confidence;
+        left.appendChild(confEl);
+      }
     }
 
     if (altEl && altText && !altText.startsWith('[SKIPPED') && !altText.startsWith('[ERROR')) {
@@ -761,10 +842,16 @@
         <div class="fig-alt">${altText}</div>
       `;
     } else if (altEl && altText) {
-      altEl.innerHTML = `<div class="fig-alt" style="border-left-color: var(--ink-3); color: var(--ink-3)">${altText}</div>`;
+      altEl.innerHTML = `<div class="fig-alt" style="border-left-color:var(--ink-3);color:var(--ink-3)">${altText}</div>`;
     }
 
-    if (card) card.className = `fig-card ${status === 'done' ? 'done-card' : status === 'error' ? 'error-card' : ''}`;
+    if (card) {
+      card.className = `fig-card ${
+        status === 'done' ? 'done-card' :
+        status === 'error' ? 'error-card' :
+        'skipped-card'
+      }`;
+    }
   }
 
   function showError(msg) {
@@ -773,9 +860,7 @@
     el.style.display = 'block';
   }
 
-  function hideError() {
-    document.getElementById('error-banner').style.display = 'none';
-  }
+  function hideError() { document.getElementById('error-banner').style.display = 'none'; }
 
   function resetBtn() {
     const btn = document.getElementById('run-btn');
@@ -786,11 +871,13 @@
   function resetForm() {
     selectedFile = null;
     currentJobId = null;
+    currentSourceType = null;
     if (eventSource) { eventSource.close(); eventSource = null; }
 
-    document.getElementById('drop-zone').classList.remove('has-file');
-    document.getElementById('drop-label').textContent = 'Drop a PDF here';
+    dropZone.classList.remove('has-file');
+    document.getElementById('drop-label').textContent = 'Drop a PDF or XML here';
     document.getElementById('drop-sub').textContent = 'or click to browse · max 50MB';
+    document.getElementById('source-pill-wrap').style.display = 'none';
     document.getElementById('figures-list').innerHTML = '';
     document.getElementById('progress-fill').style.width = '0%';
     document.getElementById('progress-counter').textContent = '0 / 0';
@@ -798,6 +885,9 @@
     document.getElementById('progress-panel').style.display = 'none';
     document.getElementById('results-panel').style.display = 'none';
     document.getElementById('file-input').value = '';
+    document.getElementById('download-xml-btn').classList.add('hidden');
+    document.getElementById('download-embedded-btn').classList.add('hidden');
+    document.getElementById('xml-note').style.display = 'none';
 
     hideError();
     resetBtn();

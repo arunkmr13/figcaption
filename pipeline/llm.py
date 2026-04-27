@@ -1,4 +1,10 @@
-import base64
+"""
+llm.py — Alt Text Generation via Gemini Vision
+────────────────────────────────────────────────
+Phase 2: eligibility gate — only calls LLM for figures that pass validation.
+Skips IMAGE_MISSING, IMAGE_NOT_RESOLVED, ALT_ALREADY_PRESENT figures.
+"""
+
 import time
 import os
 import re
@@ -6,6 +12,9 @@ from typing import Optional
 from google import genai
 from google.genai import types
 
+from .validator import is_eligible_for_generation, FLAG_ALT_ALREADY_PRESENT
+
+# ── Model fallback chain ─────────────────────────────────────────────────────
 GEMINI_MODELS = [
     "gemini-2.0-flash",
     "gemini-1.5-flash",
@@ -39,21 +48,27 @@ def _parse_retry_delay(err: str, default: float = 5.0) -> float:
 
 def _clean_alt_text(raw: str) -> str:
     text = raw.strip().replace("**", "").replace("*", "").replace("`", "")
-    fillers = ["this image shows","this figure shows","the image shows",
-               "the figure shows","this is a","here we see","shown here is"]
+    fillers = [
+        "this image shows", "this figure shows", "the image shows",
+        "the figure shows", "this is a", "here we see", "shown here is",
+    ]
     lower = text.lower()
     for filler in fillers:
         if lower.startswith(filler):
             text = text[len(filler):].lstrip(" ,")
-            if text: text = text[0].upper() + text[1:]
+            if text:
+                text = text[0].upper() + text[1:]
             break
     sentences = []
     for part in text.split(". "):
         part = part.strip()
-        if part: sentences.append(part)
-        if len(sentences) == 2: break
+        if part:
+            sentences.append(part)
+        if len(sentences) == 2:
+            break
     text = ". ".join(sentences)
-    if text and not text.endswith("."): text += "."
+    if text and not text.endswith("."):
+        text += "."
     return text
 
 
@@ -61,15 +76,40 @@ def generate_alt_text(
     image_bytes: bytes,
     fig_type: str,
     caption: str,
+    final_flag: str = "OK",
+    existing_alt: str = "",
     api_key: Optional[str] = None,
 ) -> tuple[str, str]:
+    """
+    Generate alt text for a figure.
+
+    Phase 2 eligibility gate:
+    - ALT_ALREADY_PRESENT → return existing alt, skip LLM
+    - Ineligible flags    → return skip message
+    - Eligible            → call Gemini
+
+    Returns (alt_text, status)
+    """
+    # Gate 1: already has alt text
+    if final_flag == FLAG_ALT_ALREADY_PRESENT and existing_alt:
+        return existing_alt, "skipped_existing_alt"
+
+    # Gate 2: not eligible for generation
+    if not is_eligible_for_generation(final_flag):
+        return f"[SKIPPED — {final_flag}]", "skipped"
+
+    # Gate 3: no API key
     key = api_key or os.getenv("GEMINI_API_KEY", "")
     if not key:
         return "[SKIPPED — no GEMINI_API_KEY set]", "skipped"
 
+    # Gate 4: no usable image bytes
+    if not image_bytes or len(image_bytes) < 100:
+        return "[SKIPPED — no image data]", "skipped"
+
     prompt = PROMPT_TEMPLATE.format(
         fig_type=fig_type,
-        caption=caption if caption != "No caption available" else "No caption provided.",
+        caption=caption if caption not in ("", "No caption available") else "No caption provided.",
     )
 
     client = genai.Client(api_key=key)
@@ -91,7 +131,7 @@ def generate_alt_text(
 
         except Exception as e:
             err = str(e)
-            if any(x in err for x in ["503","429","404","UNAVAILABLE","NOT_FOUND","quota","RESOURCE_EXHAUSTED"]):
+            if any(x in err for x in ["503", "429", "404", "UNAVAILABLE", "NOT_FOUND", "quota", "RESOURCE_EXHAUSTED"]):
                 delay = _parse_retry_delay(err)
                 print(f"    [WARN] {model} unavailable ({err[:60]}) — trying next in {delay:.0f}s")
                 last_error = e
