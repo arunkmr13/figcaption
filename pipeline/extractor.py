@@ -1,8 +1,6 @@
 """
 extractor.py — Figure Extraction (PDF + XML)
-─────────────────────────────────────────────
-Stages 1 & 2: extract figures + associate captions from PDF or XML input.
-Phase 2: Figure dataclass now carries full validation fields.
+Phase 2: Figure dataclass with full validation fields.
 """
 
 import fitz
@@ -10,70 +8,59 @@ import io
 import base64
 from pathlib import Path
 from PIL import Image
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import xml.etree.ElementTree as ET
 
 from .validator import validate_figure
 
-# ── Extraction constants ─────────────────────────────────────────────────────
-MIN_IMG_PX             = 200
-CAPTION_V_THRESHOLD    = 150
-CAPTION_KEYWORDS       = ["figure", "fig"]
-MIN_PAGE_IMAGE_RATIO   = 0.15
+MIN_IMG_PX           = 200
+CAPTION_V_THRESHOLD  = 150
+CAPTION_KEYWORDS     = ["figure", "fig"]
+MIN_PAGE_IMAGE_RATIO = 0.15
 
 
-# ── Figure dataclass (Phase 2 expanded) ─────────────────────────────────────
 @dataclass
 class Figure:
-    # Source
-    source_file: str          # original PDF or XML filename
-    source_type: str          # "pdf" or "xml"
-    page_num: int             # page number (PDF) or element index (XML)
-    fig_id: str               # unique identifier
-
-    # Content
-    image_bytes: bytes        # raw PNG bytes
-    image_filename: str       # saved filename in figures/
-    caption: str              # matched caption text
-
-    # Classification
-    fig_type: str = "Unknown"
-
-    # Phase 2 — Validation
-    caption_flag: str = "PENDING"
-    caption_word_count: int = 0
-    image_status: str = "resolved"
-    existing_alt: str = ""
-    confidence: Optional[str] = None
-    final_flag: str = "PENDING"
-    eligible: bool = True
-
-    # Output
-    alt_text: str = ""
-    status: str = "pending"       # pending | done | skipped | error
-    processing_status: str = "PROCESSED"  # PROCESSED | ERROR
-
-    # XML-specific (only populated for XML input)
-    xml_fig_element_id: str = ""  # original id attr from <fig> element
-    xml_label: str = ""           # <label> text from XML
+    source_file:          str
+    source_type:          str
+    page_num:             int
+    fig_id:               str
+    image_bytes:          bytes
+    image_filename:       str
+    caption:              str
+    fig_type:             str = "Unknown"
+    caption_flag:         str = "PENDING"
+    caption_word_count:   int = 0
+    image_status:         str = "resolved"
+    existing_alt:         str = ""
+    confidence:           Optional[str] = None
+    final_flag:           str = "PENDING"
+    eligible:             bool = True
+    alt_text:             str = ""
+    status:               str = "pending"
+    processing_status:    str = "PROCESSED"
+    xml_fig_element_id:   str = ""
+    xml_label:            str = ""
+    qc_flag:              str = "QC_SKIPPED"
+    qc_notes:             str = ""
 
 
-# ── Figure type classifier ───────────────────────────────────────────────────
+# ── Figure Type Classifier ───────────────────────────────────────────────────
 def _classify_figure(caption: str) -> str:
     lower = caption.lower()
     rules = [
-        (["forest plot", "forest"], "Forest plot"),
-        (["bar chart", "bar graph", "bar plot"], "Bar chart"),
-        (["line graph", "line plot", "line chart"], "Line graph"),
-        (["scatter plot", "scatter"], "Scatter plot"),
-        (["diagram", "schematic", "flowchart"], "Diagram"),
-        (["histogram"], "Histogram"),
-        (["heatmap", "heat map"], "Heatmap"),
-        (["kaplan", "survival curve"], "Survival curve"),
-        (["box plot", "boxplot"], "Box plot"),
-        (["pie chart", "pie graph"], "Pie chart"),
-        (["table"], "Table figure"),
+        (["forest plot", "forest"],               "Forest plot"),
+        (["bar chart", "bar graph", "bar plot"],  "Bar chart"),
+        (["line graph", "line plot", "line chart"],"Line graph"),
+        (["scatter plot", "scatter"],              "Scatter plot"),
+        (["diagram", "schematic", "flowchart"],    "Diagram"),
+        (["histogram"],                            "Histogram"),
+        (["heatmap", "heat map"],                  "Heatmap"),
+        (["kaplan", "survival curve"],             "Survival curve"),
+        (["box plot", "boxplot"],                  "Box plot"),
+        (["pie chart", "pie graph"],               "Pie chart"),
+        (["table"],                                "Table figure"),
     ]
     for keywords, fig_type in rules:
         if any(kw in lower for kw in keywords):
@@ -81,16 +68,16 @@ def _classify_figure(caption: str) -> str:
     return "Unknown"
 
 
-# ── PDF helpers ──────────────────────────────────────────────────────────────
-def _is_background_image(w, h, page_w, page_h):
+# ── PDF Helpers ──────────────────────────────────────────────────────────────
+def _is_background_image(w, h, page_w, page_h) -> bool:
     return w > page_w * 0.9 and h > page_h * 0.9
 
 
-def _page_has_significant_text(page):
+def _page_has_significant_text(page) -> bool:
     return len(page.get_text().strip()) > 1500
 
 
-def _extract_embedded_images(page, page_w, page_h):
+def _extract_embedded_images(page, page_w, page_h) -> list:
     results = []
     for img_info in page.get_images(full=True):
         xref = img_info[0]
@@ -119,7 +106,7 @@ def _extract_embedded_images(page, page_w, page_h):
     return results
 
 
-def _find_caption_pdf(page, img_rect):
+def _find_caption_pdf(page, img_rect) -> str:
     candidates = []
     for block in page.get_text("blocks"):
         bx0, by0, bx1, by1, text = block[0], block[1], block[2], block[3], block[4]
@@ -141,20 +128,20 @@ def _find_caption_pdf(page, img_rect):
     return ""
 
 
-# ── PDF extractor ─────────────────────────────────────────────────────────────
-def extract_figures_from_pdf(pdf_path: str, output_dir: str = "figures") -> list:
-    pdf_path = Path(pdf_path)
+# ── PDF Extractor ────────────────────────────────────────────────────────────
+def extract_figures_from_pdf(pdf_path, output_dir="figures"):
+    pdf_path   = Path(pdf_path)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    pdf_name = pdf_path.stem
-    doc = fitz.open(str(pdf_path))
-    figures = []
+    pdf_name   = pdf_path.stem
+    doc        = fitz.open(str(pdf_path))
+    figures    = []
     fig_counter = 1
 
     print(f"\n📄 Processing PDF: {pdf_path.name} ({len(doc)} pages)")
 
     for page_num, page in enumerate(doc, start=1):
-        page_rect = page.rect
+        page_rect    = page.rect
         page_w, page_h = page_rect.width, page_rect.height
         print(f"  Page {page_num}...", end=" ")
 
@@ -171,8 +158,9 @@ def extract_figures_from_pdf(pdf_path: str, output_dir: str = "figures") -> list
         print(f"{len(images)} figure(s) found")
 
         for png_bytes, bbox in images:
-            fig_id = f"{pdf_name}_p{page_num:03d}_f{fig_counter:03d}"
+            fig_id       = f"{pdf_name}_p{page_num:03d}_f{fig_counter:03d}"
             img_filename = f"{fig_id}.png"
+
             try:
                 (output_dir / img_filename).write_bytes(png_bytes)
                 image_resolved = True
@@ -180,31 +168,36 @@ def extract_figures_from_pdf(pdf_path: str, output_dir: str = "figures") -> list
                 print(f"  [WARN] Could not save {img_filename}: {e}")
                 image_resolved = False
 
-            caption = _find_caption_pdf(page, bbox) or ""
+            caption  = _find_caption_pdf(page, bbox) or ""
             fig_type = _classify_figure(caption)
 
-            # Phase 2 validation
+            # ── FIX 1: pass existing_alt (empty for PDF, future-proof) ──────
+            # ── FIX 4: map processing_status from validator ──────────────────
             v = validate_figure(
-                caption=caption,
-                image_bytes=png_bytes,
-                image_resolved=image_resolved,
+                caption        = caption,
+                image_bytes    = png_bytes,
+                image_resolved = image_resolved,
+                existing_alt   = None,   # PDFs don't carry alt text tags
             )
 
             figures.append(Figure(
-                source_file=pdf_path.name,
-                source_type="pdf",
-                page_num=page_num,
-                fig_id=fig_id,
-                image_bytes=png_bytes,
-                image_filename=img_filename,
-                caption=caption or "No caption available",
-                fig_type=fig_type,
-                caption_flag=v["caption_flag"],
-                caption_word_count=v["caption_word_count"],
-                image_status=v["image_status"],
-                confidence=v["confidence"],
-                final_flag=v["final_flag"],
-                eligible=v["eligible"],
+                source_file        = pdf_path.name,
+                source_type        = "pdf",
+                page_num           = page_num,
+                fig_id             = fig_id,
+                image_bytes        = png_bytes,
+                image_filename     = img_filename,
+                # FIX 3: store raw caption, display fallback handled in output layer
+                caption            = caption if caption else "No caption available",
+                fig_type           = fig_type,
+                caption_flag       = v["caption_flag"],
+                caption_word_count = v["caption_word_count"],
+                image_status       = v["image_status"],
+                existing_alt       = "",
+                confidence         = v["confidence"],
+                final_flag         = v["final_flag"],
+                eligible           = v["eligible"],
+                processing_status  = v["processing_status"],   # ← FIX 4
             ))
             fig_counter += 1
 
@@ -213,22 +206,16 @@ def extract_figures_from_pdf(pdf_path: str, output_dir: str = "figures") -> list
     return figures
 
 
-# ── XML helpers ───────────────────────────────────────────────────────────────
-# Supports JATS/NLM XML (used by APS and most STM publishers)
-# Namespace-agnostic: strips {ns} prefixes before matching tags.
-
+# ── XML Helpers ──────────────────────────────────────────────────────────────
 def _strip_ns(tag: str) -> str:
-    """Strip XML namespace from tag: {http://...}fig → fig"""
     return tag.split("}")[-1] if "}" in tag else tag
 
 
-def _find_all_ns(element, tag: str):
-    """Find all descendants matching tag, ignoring namespace."""
+def _find_all_ns(element, tag: str) -> list:
     return [el for el in element.iter() if _strip_ns(el.tag) == tag]
 
 
 def _get_text_ns(element, tag: str) -> str:
-    """Get text content of first child with given tag (ns-agnostic)."""
     for child in element:
         if _strip_ns(child.tag) == tag:
             return "".join(child.itertext()).strip()
@@ -236,53 +223,32 @@ def _get_text_ns(element, tag: str) -> str:
 
 
 def _decode_image_from_xml(graphic_el) -> Optional[bytes]:
-    """
-    Try to decode inline base64 image from <inline-graphic> or <graphic>.
-    Supports: base64-encoded content in element text, or xlink:href data URIs.
-    """
-    # Try xlink:href for data URI
     href = None
     for attr_name, attr_val in graphic_el.attrib.items():
         if "href" in attr_name.lower():
             href = attr_val
             break
-
     if href and href.startswith("data:"):
         try:
             _, encoded = href.split(",", 1)
             return base64.b64decode(encoded)
         except Exception:
             pass
-
-    # Try element text (some formats embed base64 directly)
     text = (graphic_el.text or "").strip()
     if text:
         try:
             return base64.b64decode(text)
         except Exception:
             pass
-
     return None
 
 
-def _make_placeholder_png() -> bytes:
-    """1x1 transparent PNG for XML figures where image is referenced externally."""
-    img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
-
-
-# ── XML extractor ─────────────────────────────────────────────────────────────
-def extract_figures_from_xml(xml_path: str, output_dir: str = "figures") -> list:
-    """
-    Extract figures from a JATS/NLM XML file.
-    Handles both inline base64 images and external image references.
-    """
-    xml_path = Path(xml_path)
+# ── XML Extractor ────────────────────────────────────────────────────────────
+def extract_figures_from_xml(xml_path, output_dir="figures"):
+    xml_path   = Path(xml_path)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    xml_name = xml_path.stem
+    xml_name   = xml_path.stem
 
     print(f"\n📋 Processing XML: {xml_path.name}")
 
@@ -296,14 +262,14 @@ def extract_figures_from_xml(xml_path: str, output_dir: str = "figures") -> list
     fig_elements = _find_all_ns(root, "fig")
     print(f"  Found {len(fig_elements)} <fig> element(s)")
 
-    figures = []
+    figures    = []
     fig_counter = 1
 
     for idx, fig_el in enumerate(fig_elements, start=1):
-        fig_id_attr = fig_el.get("id", "")
-        label_text = _get_text_ns(fig_el, "label")
+        fig_id_attr  = fig_el.get("id", "")
+        label_text   = _get_text_ns(fig_el, "label")
 
-        # Build caption from <caption><p>...</p></caption>
+        # Caption
         caption_parts = []
         for cap_el in fig_el:
             if _strip_ns(cap_el.tag) == "caption":
@@ -312,92 +278,93 @@ def extract_figures_from_xml(xml_path: str, output_dir: str = "figures") -> list
         if not caption and label_text:
             caption = label_text
 
-        # Try to get inline image
-        png_bytes = None
+        # Image
+        png_bytes      = None
         image_resolved = False
-        external_href = ""
+        external_href  = ""
 
-        graphic_els = [
-            child for child in fig_el
-            if _strip_ns(child.tag) in ("graphic", "inline-graphic")
-        ]
+        graphic_els = [c for c in fig_el if _strip_ns(c.tag) in ("graphic", "inline-graphic")]
 
         for g in graphic_els:
             decoded = _decode_image_from_xml(g)
             if decoded:
-                # Convert to PNG if needed
                 try:
                     img = Image.open(io.BytesIO(decoded))
                     if img.mode == "CMYK":
                         img = img.convert("RGB")
                     buf = io.BytesIO()
                     img.save(buf, format="PNG")
-                    png_bytes = buf.getvalue()
+                    png_bytes      = buf.getvalue()
                     image_resolved = True
                     break
                 except Exception:
                     pass
             else:
-                # Record external href for reporting
                 for attr_name, attr_val in g.attrib.items():
                     if "href" in attr_name.lower():
                         external_href = attr_val
                         break
 
-        # Check for existing alt text in XML
+        # Existing alt text
         existing_alt = ""
         for alt_el in fig_el.iter():
             if _strip_ns(alt_el.tag) == "alt-text":
                 existing_alt = "".join(alt_el.itertext()).strip()
                 break
+        if existing_alt.lower().startswith("alt text:"):
+            existing_alt = existing_alt[9:].strip()
 
-        # If no inline image, use placeholder (external reference)
-        has_image = png_bytes is not None
-        if not has_image:
-            png_bytes = _make_placeholder_png()
+        has_image     = png_bytes is not None
+        is_external   = not has_image and bool(external_href)
 
-        # Phase 2 validation
+        # FIX 2: pass existing_alt into validator so ALT_ALREADY_PRESENT
+        #         and ALT_EMPTY flags can trigger correctly
+        # FIX 5: removed _make_placeholder_png() — no longer needed
         v = validate_figure(
-            caption=caption,
-            image_bytes=png_bytes if has_image else None,
-            image_resolved=image_resolved,
-            existing_alt=existing_alt,
+            caption        = caption,
+            image_bytes    = png_bytes,          # None if no embedded image
+            image_resolved = image_resolved,
+            existing_alt   = existing_alt or None,  # None if empty string
+            external_image = is_external,
+            external_href  = external_href,
         )
 
-        fig_id = f"{xml_name}_fig{fig_counter:03d}"
-        img_filename = f"{fig_id}.png"
+        fig_id       = f"{xml_name}_fig{fig_counter:03d}"
+        img_filename = (
+            f"{fig_id}.png"         if has_image else
+            f"[external] {external_href}" if external_href else
+            "[no image]"
+        )
 
-        # Only save real images (not placeholders)
         if has_image:
             try:
                 (output_dir / img_filename).write_bytes(png_bytes)
             except Exception as e:
                 print(f"  [WARN] Could not save {img_filename}: {e}")
-        else:
-            img_filename = f"[external] {external_href}" if external_href else "[no image]"
 
         fig_type = _classify_figure(caption)
-
-        print(f"  <fig> {fig_counter}: {fig_id} — flag={v['final_flag']} caption_words={v['caption_word_count']}")
+        print(f"  <fig> {fig_counter}: {fig_id} — flag={v['final_flag']} "
+              f"caption_words={v['caption_word_count']}")
 
         figures.append(Figure(
-            source_file=xml_path.name,
-            source_type="xml",
-            page_num=idx,
-            fig_id=fig_id,
-            image_bytes=png_bytes if has_image else b"",
-            image_filename=img_filename,
-            caption=caption or "No caption available",
-            fig_type=fig_type,
-            caption_flag=v["caption_flag"],
-            caption_word_count=v["caption_word_count"],
-            image_status=v["image_status"],
-            existing_alt=existing_alt,
-            confidence=v["confidence"],
-            final_flag=v["final_flag"],
-            eligible=v["eligible"],
-            xml_fig_element_id=fig_id_attr,
-            xml_label=label_text,
+            source_file        = xml_path.name,
+            source_type        = "xml",
+            page_num           = idx,
+            fig_id             = fig_id,
+            image_bytes        = png_bytes if has_image else b"",
+            image_filename     = img_filename,
+            caption            = caption if caption else "No caption available",
+            fig_type           = fig_type,
+            caption_flag       = v["caption_flag"],
+            caption_word_count = v["caption_word_count"],
+            image_status       = v["image_status"],
+            existing_alt       = existing_alt,
+            confidence         = v["confidence"],
+            final_flag         = v["final_flag"],
+            eligible           = v["eligible"],
+            processing_status  = v["processing_status"],   # ← FIX 4
+            xml_fig_element_id = fig_id_attr,
+            xml_label          = label_text,
         ))
         fig_counter += 1
 
@@ -405,14 +372,10 @@ def extract_figures_from_xml(xml_path: str, output_dir: str = "figures") -> list
     return figures
 
 
-# ── Unified entry point ───────────────────────────────────────────────────────
-def extract_figures(input_path: str, output_dir: str = "figures") -> list:
-    """
-    Auto-detect input type (PDF or XML) and dispatch to the right extractor.
-    """
-    path = Path(input_path)
+# ── Entry Point ──────────────────────────────────────────────────────────────
+def extract_figures(input_path, output_dir="figures"):
+    path   = Path(input_path)
     suffix = path.suffix.lower()
-
     if suffix == ".pdf":
         return extract_figures_from_pdf(input_path, output_dir)
     elif suffix == ".xml":

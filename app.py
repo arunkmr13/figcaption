@@ -9,6 +9,8 @@ Accepts PDF and XML uploads. Outputs:
 """
 
 import os, sys, json, time, asyncio, threading, queue, tempfile, zipfile
+from dotenv import load_dotenv
+load_dotenv()
 from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
@@ -36,18 +38,18 @@ async def index():
 @app.post("/upload")
 async def upload(pdf: UploadFile = File(...), api_key: str = Form(default="")):
     ext = Path(pdf.filename).suffix.lower()
-    if ext not in (".pdf", ".xml"):
+    if ext not in SUPPORTED_EXTENSIONS:
         raise HTTPException(400, f"Only PDF and XML files are supported (got {ext})")
     contents = await pdf.read()
     job_id = f"job_{int(time.time()*1000)}"
-    pdf_path = UPLOAD_DIR / f"{job_id}_{pdf.filename}"
-    pdf_path.write_bytes(contents)
+    file_path = UPLOAD_DIR / f"{job_id}_{pdf.filename}"
+    file_path.write_bytes(contents)
 
     q = queue.Queue()
     job_queues[job_id] = q
     threading.Thread(
         target=_run_pipeline,
-        args=(job_id, str(pdf_path), api_key.strip()),
+        args=(job_id, str(file_path), api_key.strip()),
         daemon=True,
     ).start()
     return {"job_id": job_id, "source_type": ext.lstrip(".")}
@@ -63,7 +65,7 @@ async def stream(job_id: str):
         loop = asyncio.get_event_loop()
         while True:
             try:
-                msg = await loop.run_in_executor(None, lambda: q.get(timeout=60))
+                msg = await loop.run_in_executor(None, lambda: q.get(timeout=300))
                 yield f"data: {json.dumps(msg)}\n\n"
                 if msg.get("type") in ("done", "error"):
                     break

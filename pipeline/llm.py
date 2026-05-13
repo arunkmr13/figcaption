@@ -1,10 +1,3 @@
-"""
-llm.py — Alt Text Generation via Gemini Vision
-────────────────────────────────────────────────
-Phase 2: eligibility gate — only calls LLM for figures that pass validation.
-Skips IMAGE_MISSING, IMAGE_NOT_RESOLVED, ALT_ALREADY_PRESENT figures.
-"""
-
 import time
 import os
 import re
@@ -12,25 +5,34 @@ from typing import Optional
 from google import genai
 from google.genai import types
 
-from .validator import is_eligible_for_generation, FLAG_ALT_ALREADY_PRESENT
+from .validator import (
+    is_eligible_for_generation,
+    FLAG_ALT_ALREADY_PRESENT,
+    FLAG_EXTERNAL_IMAGE,
+    CONF_HIGH, CONF_MEDIUM, CONF_LOW,
+)
 
-# ── Model fallback chain ─────────────────────────────────────────────────────
+# ── Model Fallback Chain (best → fastest → cheapest) ────────────────────────
 GEMINI_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-flash-latest",
+    "gemini-2.5-flash",       # best quality, try first
+    "gemini-2.0-flash",       # fast, reliable fallback
+    "gemini-1.5-flash",       # wider availability fallback
+    "gemini-2.0-flash-lite",  # cheapest, last resort
 ]
 
-DELAY_S = 1.0
+DELAY_S     = 1.0   # inter-call delay between successful requests
+MAX_RETRIES = 2     # retries per model on transient errors
 
+TRANSIENT_ERROR_CODES = ["503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "quota"]
+FATAL_ERROR_CODES     = ["404", "NOT_FOUND", "INVALID_ARGUMENT", "API_KEY_INVALID"]
+
+# ── Prompts ──────────────────────────────────────────────────────────────────
 PROMPT_TEMPLATE = """You are writing alt text for scientific figures to support accessibility for visually impaired readers.
 
 Figure type (classified): {fig_type}
 Caption: {caption}
 
-Write 1–2 sentences of alt text for this figure. Follow these rules strictly:
+Write 1-2 sentences of alt text for this figure. Follow these rules strictly:
 - Start with the figure type (e.g. "Line graph showing...", "Bar chart comparing...")
 - Include the key insight, trend, or finding shown
 - Use specific details from the caption (variables, units, groups, outcomes)
@@ -40,7 +42,24 @@ Write 1–2 sentences of alt text for this figure. Follow these rules strictly:
 
 Alt text:"""
 
+PROMPT_CAPTION_ONLY = """You are writing alt text for scientific figures to support accessibility for visually impaired readers.
 
+Note: Only the caption is available for this figure — no image was provided. Generate alt text based on the figure type and caption alone.
+
+Figure type (classified): {fig_type}
+Caption: {caption}
+
+Write 1-2 sentences of alt text describing what this figure likely shows. Follow these rules:
+- Start with the figure type (e.g. "Line graph showing...", "Bar chart comparing...")
+- Include the key finding or comparison described in the caption
+- Use specific details from the caption (variables, groups, outcomes, statistics)
+- Do NOT start with "This image shows..." or "This figure shows..."
+- Do NOT copy the caption verbatim
+
+Alt text:"""
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
 def _parse_retry_delay(err: str, default: float = 5.0) -> float:
     m = re.search(r"retryDelay['\"]?\s*:\s*['\"]?(\d+)s", err)
     return float(min(int(m.group(1)), 60)) if m else default
@@ -72,71 +91,92 @@ def _clean_alt_text(raw: str) -> str:
     return text
 
 
+# ── Main Generation Function ─────────────────────────────────────────────────
 def generate_alt_text(
-    image_bytes: bytes,
-    fig_type: str,
-    caption: str,
-    final_flag: str = "OK",
+    image_bytes:  Optional[bytes],
+    fig_type:     str,
+    caption:      str,
+    final_flag:   str = "OK",
     existing_alt: str = "",
-    api_key: Optional[str] = None,
+    confidence:   Optional[str] = None,   # FIX 3: now accepted + logged
+    api_key:      Optional[str] = None,
 ) -> tuple[str, str]:
-    """
-    Generate alt text for a figure.
 
-    Phase 2 eligibility gate:
-    - ALT_ALREADY_PRESENT → return existing alt, skip LLM
-    - Ineligible flags    → return skip message
-    - Eligible            → call Gemini
-
-    Returns (alt_text, status)
-    """
-    # Gate 1: already has alt text
+    # ── Gate 1: already has alt text ─────────────────────────────────────────
     if final_flag == FLAG_ALT_ALREADY_PRESENT and existing_alt:
         return existing_alt, "skipped_existing_alt"
 
-    # Gate 2: not eligible for generation
+    # ── Gate 2: not eligible ──────────────────────────────────────────────────
     if not is_eligible_for_generation(final_flag):
-        return f"[SKIPPED — {final_flag}]", "skipped"
+        return "", "skipped"           # FIX 5: clean empty string, not noisy sentinel
 
-    # Gate 3: no API key
+    # ── Gate 3: no API key ────────────────────────────────────────────────────
     key = api_key or os.getenv("GEMINI_API_KEY", "")
     if not key:
-        return "[SKIPPED — no GEMINI_API_KEY set]", "skipped"
+        print("    [ERROR] No GEMINI_API_KEY set")
+        return "", "error"             # FIX 5: clean return, error logged not stored
 
-    # Gate 4: no usable image bytes
-    if not image_bytes or len(image_bytes) < 100:
-        return "[SKIPPED — no image data]", "skipped"
+    caption_text = caption if caption not in ("", "No caption available") else "No caption provided."
+    has_image    = isinstance(image_bytes, (bytes, bytearray)) and len(image_bytes) > 100
 
-    prompt = PROMPT_TEMPLATE.format(
-        fig_type=fig_type,
-        caption=caption if caption not in ("", "No caption available") else "No caption provided.",
-    )
+    # ── FIX 3: log confidence level ───────────────────────────────────────────
+    conf_label = confidence or "N/A"
+
+    if has_image:
+        prompt   = PROMPT_TEMPLATE.format(fig_type=fig_type, caption=caption_text)
+        contents = [
+            types.Part.from_text(text=prompt),
+            types.Part.from_bytes(data=image_bytes, mime_type="image/png"),
+        ]
+        print(f"    [mode: image+caption | confidence: {conf_label}]")
+    else:
+        # FIX 6: generic "no image" message, not just "external image"
+        prompt   = PROMPT_CAPTION_ONLY.format(fig_type=fig_type, caption=caption_text)
+        contents = [types.Part.from_text(text=prompt)]
+        reason   = "external" if final_flag == FLAG_EXTERNAL_IMAGE else "missing"
+        print(f"    [mode: caption-only ({reason}) | confidence: {conf_label}]")
 
     client = genai.Client(api_key=key)
     last_error = None
 
     for model in GEMINI_MODELS:
-        try:
-            response = client.models.generate_content(
-                model=model,
-                contents=[
-                    types.Part.from_text(text=prompt),
-                    types.Part.from_bytes(data=image_bytes, mime_type="image/png"),
-                ],
-            )
-            if not response.text:
-                raise ValueError("Empty response")
-            print(f"    ✓ {model}")
-            return _clean_alt_text(response.text.strip()), "done"
+        # FIX 2: retry each model up to MAX_RETRIES times on transient errors
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = client.models.generate_content(
+                    model=model, contents=contents
+                )
+                if not response.text:
+                    raise ValueError("Empty response from model")
 
-        except Exception as e:
-            err = str(e)
-            if any(x in err for x in ["503", "429", "404", "UNAVAILABLE", "NOT_FOUND", "quota", "RESOURCE_EXHAUSTED"]):
-                delay = _parse_retry_delay(err)
-                print(f"    [WARN] {model} unavailable ({err[:60]}) — trying next in {delay:.0f}s")
-                last_error = e
-                time.sleep(delay)
-                continue
-            return f"[ERROR: {err[:120]}]", "error"
+                # FIX 4: apply inter-call delay after every successful generation
+                time.sleep(DELAY_S)
 
-    return f"[ERROR: all models exhausted. Last: {last_error}]", "error"
+                print(f"    ✓ {model} (attempt {attempt})")
+                return _clean_alt_text(response.text.strip()), "done"
+
+            except Exception as e:
+                err = str(e)
+
+                # Fatal error — don't retry this model or any other
+                if any(code in err for code in FATAL_ERROR_CODES):
+                    print(f"    [FATAL] {model}: {err[:120]}")
+                    return "", "error"   # FIX 5: clean return
+
+                # Transient error — retry same model or move to next
+                if any(code in err for code in TRANSIENT_ERROR_CODES):
+                    delay = _parse_retry_delay(err)
+                    print(f"    [WARN] {model} attempt {attempt}/{MAX_RETRIES} "
+                          f"— retrying in {delay:.0f}s")
+                    last_error = err
+                    time.sleep(delay)
+                    continue
+
+                # Unknown error — log and move to next model
+                print(f"    [ERROR] {model}: {err[:120]}")
+                last_error = err
+                break  # try next model
+
+    # All models exhausted
+    print(f"    [ERROR] All models exhausted. Last error: {last_error}")
+    return "", "error"   # FIX 5: clean return
