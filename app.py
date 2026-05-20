@@ -153,7 +153,8 @@ def _run_pipeline(job_id: str, file_path: str, api_key: str):
     try:
         from pipeline.extractor import extract_figures
         from pipeline.llm import generate_alt_text, DELAY_S
-        from pipeline.output import write_excel, write_json, print_metrics
+        from pipeline.output import write_excel, write_json, print_metrics, write_log
+        from pipeline.sme    import export_sme_review
         from pipeline.xml_writer import write_xml_outputs
 
         file_path = Path(file_path)
@@ -222,6 +223,8 @@ def _run_pipeline(job_id: str, file_path: str, api_key: str):
         excel_path = out_dir / f"{stem}_alt_text.xlsx"
         write_excel(figures, str(excel_path))
         write_json(figures, str(out_dir / f"{stem}_alt_text.json"))
+        write_log(figures, str(out_dir / f"{stem}_processing.log"), source_name=file_path.name)
+        export_sme_review(figures, str(out_dir / f"{stem}_sme_review.xlsx"))
 
         alt_xml_path = ""
         embedded_xml_path = ""
@@ -234,11 +237,13 @@ def _run_pipeline(job_id: str, file_path: str, api_key: str):
             alt_xml_path      = xml_paths.get("alt_text_xml", "")
             embedded_xml_path = xml_paths.get("embedded_xml", "")
 
+        sme_review_path = str(out_dir / f"{stem}_sme_review.xlsx")
         result = {
             "excel_path":        str(excel_path),
             "alt_xml_path":      alt_xml_path,
             "embedded_xml_path": embedded_xml_path,
             "source_type":       source_type,
+            "sme_review_path":   sme_review_path,
             "total":             len(figures),
             "done":              sum(1 for f in figures if f.status == "done"),
             "skipped":           sum(1 for f in figures if "skip" in f.status),

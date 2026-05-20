@@ -21,7 +21,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from pipeline.extractor import extract_figures
 from pipeline.llm import generate_alt_text          # FIX 3: no longer import DELAY_S
-from pipeline.output import write_excel, write_json, print_metrics
+from pipeline.output import write_excel, write_json, print_metrics, write_log
+from pipeline.sme    import export_sme_review, inject_approved_alt_text, validate_final_xml
 from pipeline.xml_writer import write_xml_outputs
 from pipeline.qc import run_qc_on_figures, print_qc_metrics
 
@@ -103,6 +104,9 @@ def process_file(
     if write_json_output:
         write_json(figures, str(output_dir / f"{stem}_alt_text.json"))
 
+    # Step 8: Write log file (spec section 6)
+    write_log(figures, str(output_dir / f"{stem}_processing.log"), source_name=input_path.name)
+
     if source_type == "xml" and not dry_run:
         write_xml_outputs(
             xml_path   = str(input_path),
@@ -160,6 +164,21 @@ def main():
             api_key            = args.api_key,
         )
         all_figures.extend(figures)
+
+    # Step 10: SME review export
+    if args.sme_review and all_figures:
+        stem = Path(args.input).stem if Path(args.input).is_file() else "batch"
+        export_sme_review(all_figures, f"{args.output_dir}/{stem}_sme_review.xlsx")
+
+    # Step 11: Inject approved alt text
+    if args.inject_approved:
+        xml_files = [f for f in input_files if str(f).endswith(".xml")]
+        if xml_files:
+            inject_approved_alt_text(args.inject_approved, str(xml_files[0]), args.output_dir)
+
+    # Step 12: Final XML validation
+    if args.validate_xml:
+        validate_final_xml(args.validate_xml)
 
     if len(input_files) > 1:
         print("\n\n📁 COMBINED SUMMARY (all files)")
