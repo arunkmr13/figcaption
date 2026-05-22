@@ -14,14 +14,14 @@ from .validator import (
 
 # ── Model Fallback Chain (best → fastest → cheapest) ────────────────────────
 GEMINI_MODELS = [
-    "gemini-2.5-flash",       # best quality, try first
-    "gemini-2.0-flash",       # fast, reliable fallback
-    "gemini-1.5-flash",       # wider availability fallback
-    "gemini-2.0-flash-lite",  # cheapest, last resort
+    "gemini-2.5-flash",        # best quality, try first
+    "gemini-2.0-flash",        # fast, reliable fallback
+    "gemini-2.0-flash-lite",   # cheaper fallback
+    "gemini-2.5-flash-lite",   # lite variant fallback
 ]
 
 DELAY_S     = 1.0   # inter-call delay between successful requests
-MAX_RETRIES = 2     # retries per model on transient errors
+MAX_RETRIES = 1     # retries per model on transient errors
 
 TRANSIENT_ERROR_CODES = ["503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "quota"]
 FATAL_ERROR_CODES     = ["404", "NOT_FOUND", "INVALID_ARGUMENT", "API_KEY_INVALID"]
